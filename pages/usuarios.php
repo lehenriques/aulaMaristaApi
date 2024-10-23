@@ -1,13 +1,10 @@
 <?php
 
-require 'config/database.php';
-require 'config/funcoes.php';
-
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && empty($_GET)) {
     try {
-        $stmt = $conn->query('SELECT * FROM usuarios');
-        $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        retorno($usuarios);
+        $stmt = $conn->query('SELECT * FROM users');
+        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        retorno($users);
         exit;
     } catch (PDOException $e) {
         logMe(['error' => $e->getMessage()], 'error');
