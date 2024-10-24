@@ -3,9 +3,8 @@
 function logMe($msg, $type = 'info')
 {
 
-    $file = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR
-        . 'log' . DIRECTORY_SEPARATOR . 'log-' . date("Y-m-d") . '.txt';
-    $fp = fopen($file, 'w+');
+    $file = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'log' . DIRECTORY_SEPARATOR . 'log-' . date("Y-m-d") . '.txt';
+    $fp = fopen($file, 'a+');
     $now = date("Y-m-d H:i:s");
     $txt = "[$now][$type]: " . json_encode($msg) . "\n";
     $escrever = fwrite($fp, $txt);
