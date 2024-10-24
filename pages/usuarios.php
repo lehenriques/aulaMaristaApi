@@ -1,45 +1,50 @@
 <?php
-
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && empty($_GET)) {
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && empty($url[1])) {
     try {
-        $stmt = $conn->query('SELECT * FROM users');
+        global $conn;
+        $stmt = $conn->query("SELECT * FROM users");
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if (empty($users)) {
+            retorno(['mensagem' => 'Sem registro no banco de dados!']);
+            exit;
+        }
         retorno($users);
         exit;
     } catch (PDOException $e) {
         logMe(['error' => $e->getMessage()], 'error');
-        retorno(['error' => 'Deu um erro ao salvar no banco, avise ao administrador'], 400);
+        retorno(['error' => 'Ops! Ocorreu um erro ao tentar listar os 
+        usuários'], 400);
         exit;
     }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode(file_get_contents('php://input'), true);
-    if(empty($data['nome'])){
+    if (empty($data['name'])) {
         logMe(['error' => 'O nome do usuário é obrigatório'], 'error');
         retorno(['error' => 'O nome do usuário é obrigatório'], 400);
         exit;
     }
-    if(empty($data['email'])){
+    if (empty($data['email'])) {
         logMe(['error' => 'O e-mail do usuário é obrigatório'], 'error');
         retorno(['error' => 'O e-mail do usuário é obrigatório'], 400);
         exit;
     }
 
-    $nome = $data['nome'];
+    $name = $data['name'];
     $email = $data['email'];
-    $senha = password($data['senha']);
-    $data_cadastro = date("Y-m-d H:i:s");
+    $password = password($data['password']);
+    $status = $data['status'];
     try {
-        $stmt = $conn->prepare('INSERT INTO usuarios (nome, email, senha, criado_em, atualizado_em) VALUES (:nome, :email, :senha, :criado_em, :atualizado_em)');
-        $stmt->bindParam(':nome', $nome);
+        global $conn;
+        $stmt = $conn->prepare('INSERT INTO users (`name`, `email`, `password`, `status`) VALUES (:name, :email, :password, :status)');
+        $stmt->bindParam(':name', $name);
         $stmt->bindParam(':email', $email);
-        $stmt->bindParam(':senha', $senha);
-        $stmt->bindParam(':criado_em', $data_cadastro);
-        $stmt->bindParam(':atualizado_em', $data_cadastro);
+        $stmt->bindParam(':password', $password);
+        $stmt->bindParam(':status', $status);
         $stmt->execute();
         $usuario_id = $conn->lastInsertId();
-        retorno(['id' => $usuario_id, 'nome' => $nome, 'email' => $email, 'senha' => $senha, 'criado_em' => $data_cadastro, 'atualizado_em' => $data_cadastro], 201);
+        retorno(['id' => $usuario_id, 'nome' => $name, 'email' => $email], 201);
         exit;
     } catch (PDOException $e) {
         logMe(['error' => $e->getMessage()], 'error');
@@ -51,22 +56,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     $data = json_decode(file_get_contents('php://input'), true);
 
-    if(empty($data['nome'])){
+    if (empty($data['nome'])) {
         retorno(['error' => 'O nome do usuario é obrigatório'], 400);
         exit;
     }
-    $usuario_id = $data['id'];
-    $nome = $data['nome'];
-    $senha = password($data['senha']);
+    $cod_user = $data['id'];
+    $name = $data['name'];
+    $password = password($data['password']);
     $email = $data['email'];
-    $data = date("Y-m-d H:i:s");
     try {
-        $stmt = $conn->prepare('UPDATE usuarios SET nome = :nome,senha = :senha, email = :email, atualizado_em = :atualizado_em WHERE id = :id');
-        $stmt->bindParam(':id', $usuario_id);
-        $stmt->bindParam(':nome', $nome);
-        $stmt->bindParam(':senha', $senha);
+        $stmt = $conn->prepare('UPDATE users SET name = :name, password = :password, email = :email WHERE cod_user = :cod_user');
+        $stmt->bindParam(':cod_user', $usuario_id);
+        $stmt->bindParam(':name', $name);
+        $stmt->bindParam(':password', $password);
         $stmt->bindParam(':email', $email);
-        $stmt->bindParam(':atualizado_em', $data);
         $stmt->execute();
 
         retorno(['success' => 'Dados atualizados com sucesso']);
@@ -81,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     $data = json_decode(file_get_contents('php://input'), true);
 
-    if(empty($data['usuario_id'])){
+    if (empty($data['usuario_id'])) {
         retorno(['error' => 'O id do usuário é obrigatório'], 400);
         exit;
     }
@@ -99,29 +102,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     }
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_GET)) {
-    if(!empty($_GET['usuario_id'])){
-        $usuario_id = (int)$_GET['usuario_id'];
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($url[1])) {
+    
+    if ($url[1] === 'usuario') {
+        $usuario = (int)$url[2];
         try {
-            $stmt = $conn->prepare('SELECT * FROM usuarios 
-            WHERE id = :id');
-            $stmt->bindParam(':id', $usuario_id);
+            $stmt = $conn->prepare('SELECT * FROM users WHERE cod_user = :id');
+            $stmt->bindParam(':id', $usuario);
             $stmt->execute();
-            $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            header('Content-Type: application/json');
-            echo json_encode($usuarios);
+            $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+            retorno($usuario);
         } catch (PDOException $e) {
-            logMe(['error' => 'Usuário não encontrado.'], 'error');
+            logMe(['error' => 'Usuário não encontrado. Codigo = '.$usuario], 'error');
             retorno(['error' => 'Usuário não encontrado.'], 400);
             exit;
         }
     }
-    if(!empty($_GET['buscar'])){
-        $buscar = (string) $_GET["buscar"];
+    
+    if ($url[1] === 'buscar') {
+        $buscar = (string)$url[2];
         try {
-            $stmt = $conn->prepare("SELECT * FROM usuarios
-            WHERE nome like CONCAT('%', :buscar,'%')");
-            $stmt->bindParam(':buscar', $buscar );
+            $stmt = $conn->prepare("SELECT * FROM users WHERE `name` like CONCAT('%', :buscar,'%') or `email` like CONCAT('%', :buscar,'%')");
+            $stmt->bindParam(':buscar', $buscar);
             $stmt->execute();
             $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
             retorno($usuarios);
